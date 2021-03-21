@@ -61,16 +61,15 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "POST":
-		if err := r.ParseForm(); err != nil {
-			fmt.Fprintf(w, "ParseForm() err: %v", err)
-			return
-		}
-
 		bufbody := new(bytes.Buffer)
 		bufbody.ReadFrom(r.Body)
 		body := bufbody.String()
+		if body == "" {
+			fmt.Print("POST body is empty")
+			return
+		}
 
-		fmt.Printf("%v\n", body)
+		fmt.Printf("POST body : '%v'\n", body)
 		exec.Command(goenv.Cmd, body).Start()
 	default:
 		fmt.Fprintf(w, "Invalid method.\n")
