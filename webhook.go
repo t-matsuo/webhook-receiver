@@ -14,9 +14,9 @@ import (
 )
 
 var goenv struct {
-	Script string `required:"true"`
-	Port   int    `default:"22999"`
-	Bind   string `default:"0.0.0.0"`
+	Cmd  string `required:"true"`
+	Port int    `default:"22999"`
+	Bind string `default:"0.0.0.0"`
 }
 
 func handleEnv() {
@@ -25,9 +25,9 @@ func handleEnv() {
 		os.Exit(1)
 	}
 
-	_, err := os.Stat(goenv.Script)
+	_, err := os.Stat(goenv.Cmd)
 	if os.IsNotExist(err) {
-		fmt.Printf("ERROR: %s file not found\n", goenv.Script)
+		fmt.Printf("ERROR: %s command not found\n", goenv.Cmd)
 		os.Exit(1)
 	}
 
@@ -41,8 +41,8 @@ func handleEnv() {
 		os.Exit(1)
 	}
 
-	script := os.Getenv("WEBHOOK_SCRIPT")
-	fmt.Println("Script: " + script)
+	script := os.Getenv("WEBHOOK_CMD")
+	fmt.Println("Command: " + script)
 	fmt.Printf("Bind IP:Port: %s:%d\n", goenv.Bind, goenv.Port)
 }
 
@@ -64,7 +64,7 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 		body := bufbody.String()
 
 		fmt.Printf("%v\n", body)
-		exec.Command(goenv.Script, body).Start()
+		exec.Command(goenv.Cmd, body).Start()
 	default:
 		fmt.Fprintf(w, "Invalid method.\n")
 	}
