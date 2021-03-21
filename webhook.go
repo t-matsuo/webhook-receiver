@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 
 	"github.com/kelseyhightower/envconfig"
@@ -17,6 +18,7 @@ var goenv struct {
 	Cmd  string `required:"true"`
 	Port int    `default:"22999"`
 	Bind string `default:"0.0.0.0"`
+	Path string `default:"/"`
 }
 
 func handleEnv() {
@@ -41,13 +43,18 @@ func handleEnv() {
 		os.Exit(1)
 	}
 
+	if !regexp.MustCompile(`^/[0-9A-z/\-]*$`).MatchString(goenv.Path) {
+		fmt.Println("ERROR: Invalid Path " + goenv.Path)
+		os.Exit(1)
+	}
+
 	script := os.Getenv("WEBHOOK_CMD")
 	fmt.Println("Command: " + script)
-	fmt.Printf("Bind IP:Port: %s:%d\n", goenv.Bind, goenv.Port)
+	fmt.Printf("Webhook listening at: http://%s:%d%s\n", goenv.Bind, goenv.Port, goenv.Path)
 }
 
 func handleReq(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+	if r.URL.Path != goenv.Path {
 		http.Error(w, "404 not found.", http.StatusNotFound)
 		return
 	}
@@ -72,7 +79,7 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	handleEnv()
-	http.HandleFunc("/", handleReq)
+	http.HandleFunc(goenv.Path, handleReq)
 
 	if err := http.ListenAndServe(goenv.Bind+":"+strconv.Itoa(goenv.Port), nil); err != nil {
 		log.Fatal(err)
