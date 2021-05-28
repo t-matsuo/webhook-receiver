@@ -23,14 +23,13 @@ var goenv struct {
 
 func handleEnv() {
 	if err := envconfig.Process("webhook", &goenv); err != nil {
-		fmt.Printf("ERROR: Failed to process env: %s", err)
+		log.Fatalf("ERROR: Failed to process env: %s", err)
 		os.Exit(1)
 	}
 
 	_, err := os.Stat(goenv.Cmd)
 	if os.IsNotExist(err) {
-		fmt.Printf("ERROR: %s command not found\n", goenv.Cmd)
-		os.Exit(1)
+		log.Fatal("ERROR: %s command not found\n", goenv.Cmd)
 	}
 
 	if goenv.Port <= 0 || goenv.Port > 65535 {
