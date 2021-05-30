@@ -84,9 +84,13 @@ func GetIP(r *http.Request) string {
 
 func handleReq(w http.ResponseWriter, r *http.Request) {
 	ip := GetIP(r)
+	host := r.Host
+	ua := r.UserAgent()
+	path := r.URL.Path
+
 	alog_format := ip
 
-	if r.URL.Path != goenv.Path {
+	if path != goenv.Path {
 		log_access.Printf("%s Invalid Path: %s\n", alog_format, r.URL.Path)
 		http.Error(w, "404 not found.", http.StatusNotFound)
 		return
@@ -104,7 +108,14 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log_access.Printf("%s Post: '%v'\n", alog_format, body)
-		exec.Command(goenv.Cmd, body).Start()
+		cmd := exec.Command(goenv.Cmd, body)
+		cmd.Env = append(os.Environ(),
+			"WEBHOOK_IP="+ip,
+			"WEBHOOK_HOST="+host,
+			"WEBHOOK_UA="+ua,
+			"WEBHOOK_PATH="+path,
+		)
+		cmd.Start()
 		fmt.Fprintf(w, "Called.\n")
 	default:
 		log_access.Printf("%s Invalid method: %s\n", alog_format, r.Method)

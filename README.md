@@ -38,3 +38,11 @@ Change log prefix from [webhook] to myapp
 $ WEBHOOK_LOG_PREFIX="myapp" WEBHOOK_CMD="./my-script.sh" ./webhook 
 ```
 
+## Command
+
+Command gets client info through environment variables.
+
+* WEBHOOK_IP: Client IP
+* WEBHOOK_HOST: Access Host
+* WEBHOOK_PATH: Access Path
+* WEBHOOK_UA: UserAgent
