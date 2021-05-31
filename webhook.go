@@ -127,7 +127,7 @@ func init() {
 	log_info = log.New(os.Stdout, "[webhook] INFO ", log.LstdFlags|log.Lmsgprefix)
 	log_err = log.New(os.Stderr, "[webhook] ERROR ", log.LstdFlags|log.Lmsgprefix)
 	log_debug = log.New(ioutil.Discard, "[webhook] DEBUG ", log.LstdFlags|log.Llongfile|log.Lmsgprefix)
-	log_access = log.New(os.Stdout, "[webhook] ACCESS ", log.LstdFlags|log.Llongfile|log.Lmsgprefix)
+	log_access = log.New(os.Stdout, "[webhook] ACCESS ", log.LstdFlags|log.Lmsgprefix)
 }
 
 func main() {
