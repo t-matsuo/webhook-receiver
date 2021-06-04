@@ -1,5 +1,6 @@
-# outgoing-webhook-server
-It receives outgoing webhook and call specified command.
+# webhook-receiver
+
+It receives webhook and call specified command.
 
 ## Environment Variables
 
