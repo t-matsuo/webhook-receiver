@@ -115,8 +115,13 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 			"WEBHOOK_UA="+ua,
 			"WEBHOOK_PATH="+path,
 		)
-		cmd.Start()
-		fmt.Fprintf(w, "Called.\n")
+		err := cmd.Start()
+		if err != nil {
+			log_err.Printf("Can't call. %s\n", err)
+			fmt.Fprintf(w, "Can't call.\n")
+		} else {
+			fmt.Fprintf(w, "Called.\n")
+		}
 	default:
 		log_access.Printf("%s Invalid method: %s\n", alog_format, r.Method)
 		fmt.Fprintf(w, "Invalid method.\n")
