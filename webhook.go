@@ -126,6 +126,7 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			log_err.Printf("Can't call. %s\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "Can't call.\n")
 		} else {
 			fmt.Fprintf(w, "Called.\n")
