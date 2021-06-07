@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -23,6 +25,7 @@ var goenv struct {
 	Debug      bool   `default:"false"`
 	Log_prefix string `default:"[webhook]"`
 	No_alog    bool   `default:"false"`
+	Timeout    int    `default:"300"`
 }
 
 var log_info *log.Logger
@@ -108,14 +111,19 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log_access.Printf("%s Post: '%v'\n", alog_format, body)
-		cmd := exec.Command(goenv.Cmd, body)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(goenv.Timeout)*time.Second)
+		cmd := exec.CommandContext(ctx, goenv.Cmd, body)
+		defer cancel()
+
 		cmd.Env = append(os.Environ(),
 			"WEBHOOK_IP="+ip,
 			"WEBHOOK_HOST="+host,
 			"WEBHOOK_UA="+ua,
 			"WEBHOOK_PATH="+path,
 		)
-		err := cmd.Start()
+		err := cmd.Run()
+
 		if err != nil {
 			log_err.Printf("Can't call. %s\n", err)
 			fmt.Fprintf(w, "Can't call.\n")

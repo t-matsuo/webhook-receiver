@@ -18,6 +18,8 @@ It receives webhook and call specified command.
    * Log prefix
 * WEBHOOK_NO_ALOG (default:false)
    * Suppress access log
+* WEBHOOK_TIMEOUT (default:300)
+   * Command timeout (sec)
 
 ## Usage
 
