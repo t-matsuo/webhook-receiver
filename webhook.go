@@ -94,8 +94,9 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 	alog_format := ip
 
 	if path != goenv.Path {
-		log_access.Printf("%s Invalid Path: %s\n", alog_format, r.URL.Path)
-		http.Error(w, "404 not found.", http.StatusNotFound)
+		log_access.Printf("%s %s Not Found %s\n", alog_format, r.Method, r.URL.Path)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Not Found\n")
 		return
 	}
 
@@ -104,13 +105,7 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 		bufbody := new(bytes.Buffer)
 		bufbody.ReadFrom(r.Body)
 		body := bufbody.String()
-		if body == "" {
-			log_access.Printf("%s Post: '%v'\n", alog_format, body)
-			fmt.Fprintf(w, "Not called.\n")
-			return
-		}
-
-		log_access.Printf("%s Post: '%v'\n", alog_format, body)
+		log_access.Printf("%s %s '%v'\n", alog_format, r.Method, body)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(goenv.Timeout)*time.Second)
 		cmd := exec.CommandContext(ctx, goenv.Cmd, body)
@@ -125,15 +120,17 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 		err := cmd.Run()
 
 		if err != nil {
-			log_err.Printf("Can't call. %s\n", err)
+			log_err.Printf("Internal Server Error. %s\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Can't call.\n")
+			fmt.Fprintf(w, "Internal Server Error\n")
 		} else {
-			fmt.Fprintf(w, "Called.\n")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, "OK\n")
 		}
 	default:
-		log_access.Printf("%s Invalid method: %s\n", alog_format, r.Method)
-		fmt.Fprintf(w, "Invalid method.\n")
+		log_access.Printf("%s %s Method Not Allowed\n", alog_format, r.Method)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Fprintf(w, "Method Not Allowed\n")
 	}
 }
 
