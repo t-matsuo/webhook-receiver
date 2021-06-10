@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"time"
@@ -26,6 +27,7 @@ var goenv struct {
 	Log_prefix string `default:"[webhook]"`
 	No_alog    bool   `default:"false"`
 	Timeout    int    `default:"300"`
+	Workdir    string `default:"/tmp"`
 }
 
 var log_info *log.Logger
@@ -59,6 +61,7 @@ func handleEnv() {
 	if os.IsNotExist(err) {
 		log_err.Fatalf("%s command not found\n", goenv.Cmd)
 	}
+	goenv.Cmd, _ = filepath.Abs(goenv.Cmd)
 
 	if goenv.Port <= 0 || goenv.Port > 65535 {
 		log_err.Fatalf("Invalid port number %d\n", goenv.Port)
@@ -72,8 +75,13 @@ func handleEnv() {
 		log_err.Fatalf("Invalid Path %s\n", goenv.Path)
 	}
 
-	script := os.Getenv("WEBHOOK_CMD")
-	log_info.Printf("Command is %s\n", script)
+	finfo, err := os.Stat(goenv.Workdir)
+	if os.IsNotExist(err) || !finfo.IsDir() {
+		log_err.Fatalf("%s directory not found\n", goenv.Workdir)
+	}
+
+	log_info.Printf("Command is %s\n", goenv.Cmd)
+	log_info.Printf("Workdir is %s\n", goenv.Workdir)
 	log_info.Printf("Listening on http://%s:%d%s\n", goenv.Bind, goenv.Port, goenv.Path)
 }
 
@@ -117,6 +125,7 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 			"WEBHOOK_UA="+ua,
 			"WEBHOOK_PATH="+path,
 		)
+		cmd.Dir = goenv.Workdir
 		err := cmd.Run()
 
 		if err != nil {

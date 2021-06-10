@@ -20,6 +20,8 @@ It receives webhook and call specified command.
    * Suppress access log
 * WEBHOOK_TIMEOUT (default:300)
    * Command timeout (sec)
+* WEBHOOK_WORKDIR (default:/tmp)
+   * Command workdir
 
 ## Usage
 
