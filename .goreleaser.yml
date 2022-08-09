@@ -14,6 +14,9 @@ builds:
     flags:
       - -trimpath
     main: ./webhook.go
+    ignore:
+      - goos: windows
+        goarch: arm64
 archives:
   - replacements:
       darwin: Darwin
