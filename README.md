@@ -22,6 +22,12 @@ It receives webhook and call specified command.
    * Command timeout (sec)
 * WEBHOOK_WORKDIR (default:/tmp)
    * Command workdir
+* WEBHOOK_TLS (default:false)
+   * Enable TLS
+* WEBHOOK_SERVER_CRT (default:server.crt)
+   * TLS server crt file PATH
+* WEBHOOK_SERVER_KEY (default:server.key)
+   * TLS server key file PATH
 
 ## Usage
 

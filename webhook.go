@@ -28,6 +28,9 @@ var goenv struct {
 	No_alog    bool   `default:"false"`
 	Timeout    int    `default:"300"`
 	Workdir    string `default:"/tmp"`
+	Tls        bool   `default:"false"`
+	Server_crt string `default:"server.crt"`
+	Server_key string `default:"server.key"`
 }
 
 var log_info *log.Logger
@@ -75,14 +78,31 @@ func handleEnv() {
 		log_err.Fatalf("Invalid Path %s\n", goenv.Path)
 	}
 
-	finfo, err := os.Stat(goenv.Workdir)
-	if os.IsNotExist(err) || !finfo.IsDir() {
+	finfo_workdir, err := os.Stat(goenv.Workdir)
+	if os.IsNotExist(err) || !finfo_workdir.IsDir() {
 		log_err.Fatalf("%s directory not found\n", goenv.Workdir)
+	}
+
+	if goenv.Tls == true {
+		finfo_crt, err := os.Stat(goenv.Server_crt)
+		if os.IsNotExist(err) || finfo_crt.IsDir() {
+			log_err.Fatalf("TLS %s crt file not found\n", goenv.Server_crt)
+		}
+		finfo_key, err := os.Stat(goenv.Server_key)
+		if os.IsNotExist(err) || finfo_key.IsDir() {
+			log_err.Fatalf("TLS %s key file not found\n", goenv.Server_key)
+		}
 	}
 
 	log_info.Printf("Command is %s\n", goenv.Cmd)
 	log_info.Printf("Workdir is %s\n", goenv.Workdir)
-	log_info.Printf("Listening on http://%s:%d%s\n", goenv.Bind, goenv.Port, goenv.Path)
+	if goenv.Tls == false {
+		log_info.Printf("Listening on http://%s:%d%s\n", goenv.Bind, goenv.Port, goenv.Path)
+	} else {
+		log_info.Printf("TLS Server crt file is %s", goenv.Server_crt)
+		log_info.Printf("TLS Server key file is %s", goenv.Server_key)
+		log_info.Printf("Listening on https://%s:%d%s\n", goenv.Bind, goenv.Port, goenv.Path)
+	}
 }
 
 func GetIP(r *http.Request) string {
@@ -154,7 +174,13 @@ func main() {
 	handleEnv()
 	http.HandleFunc(goenv.Path, handleReq)
 
-	if err := http.ListenAndServe(goenv.Bind+":"+strconv.Itoa(goenv.Port), nil); err != nil {
-		log_err.Fatal(err)
+	if goenv.Tls == false {
+		if err := http.ListenAndServe(goenv.Bind+":"+strconv.Itoa(goenv.Port), nil); err != nil {
+			log_err.Fatal(err)
+		}
+	} else {
+		if err := http.ListenAndServeTLS(goenv.Bind+":"+strconv.Itoa(goenv.Port), goenv.Server_crt, goenv.Server_key, nil); err != nil {
+			log_err.Fatal(err)
+		}
 	}
 }
