@@ -3,9 +3,15 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -29,8 +35,8 @@ var goenv struct {
 	Timeout    int    `default:"300"`
 	Workdir    string `default:"/tmp"`
 	Tls        bool   `default:"false"`
-	Server_crt string `default:"server.crt"`
-	Server_key string `default:"server.key"`
+	Server_crt string `default:""`
+	Server_key string `default:""`
 }
 
 var log_info *log.Logger
@@ -83,7 +89,7 @@ func handleEnv() {
 		log_err.Fatalf("%s directory not found\n", goenv.Workdir)
 	}
 
-	if goenv.Tls == true {
+	if goenv.Tls == true && (goenv.Server_crt != "" || goenv.Server_key != "") {
 		finfo_crt, err := os.Stat(goenv.Server_crt)
 		if os.IsNotExist(err) || finfo_crt.IsDir() {
 			log_err.Fatalf("TLS %s crt file not found\n", goenv.Server_crt)
@@ -99,8 +105,10 @@ func handleEnv() {
 	if goenv.Tls == false {
 		log_info.Printf("Listening on http://%s:%d%s\n", goenv.Bind, goenv.Port, goenv.Path)
 	} else {
-		log_info.Printf("TLS Server crt file is %s", goenv.Server_crt)
-		log_info.Printf("TLS Server key file is %s", goenv.Server_key)
+		if goenv.Server_crt != "" || goenv.Server_key != "" {
+			log_info.Printf("TLS Server crt file is %s", goenv.Server_crt)
+			log_info.Printf("TLS Server key file is %s", goenv.Server_key)
+		}
 		log_info.Printf("Listening on https://%s:%d%s\n", goenv.Bind, goenv.Port, goenv.Path)
 	}
 }
@@ -163,6 +171,61 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func genTlsKeyPair() (tls.Certificate, error) {
+	now := time.Now()
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(now.Unix()),
+		Subject: pkix.Name{
+			CommonName:         "Fake Certificate for Webhook",
+			Country:            []string{"Fake Certificate for Webhook"},
+			Organization:       []string{"Fake Certificate for Webhook"},
+			OrganizationalUnit: []string{"Fake Certificate for Webhook"},
+		},
+		NotBefore:             now,
+		NotAfter:              now.AddDate(10, 0, 0),
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage: x509.KeyUsageKeyEncipherment |
+			x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+	}
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	cert, err := x509.CreateCertificate(rand.Reader, template, template,
+		priv.Public(), priv)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	var outCert tls.Certificate
+	outCert.Certificate = append(outCert.Certificate, cert)
+	outCert.PrivateKey = priv
+
+	return outCert, nil
+}
+
+func listenAndServeTLSKeyPair(addr string, cert tls.Certificate, handler http.Handler) error {
+	if addr == "" {
+		addr = ":https"
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	server := &http.Server{
+		Addr:    addr,
+		Handler: handler,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		},
+	}
+	return server.ServeTLS(ln, "", "")
+}
+
 func init() {
 	log_info = log.New(os.Stdout, "[webhook] INFO ", log.LstdFlags|log.Lmsgprefix)
 	log_err = log.New(os.Stderr, "[webhook] ERROR ", log.LstdFlags|log.Lmsgprefix)
@@ -179,8 +242,18 @@ func main() {
 			log_err.Fatal(err)
 		}
 	} else {
-		if err := http.ListenAndServeTLS(goenv.Bind+":"+strconv.Itoa(goenv.Port), goenv.Server_crt, goenv.Server_key, nil); err != nil {
-			log_err.Fatal(err)
+		if goenv.Server_crt == "" && goenv.Server_key == "" {
+			if cert, err := genTlsKeyPair(); err != nil {
+				log_err.Fatal(err)
+			} else {
+				if err := listenAndServeTLSKeyPair(goenv.Bind+":"+strconv.Itoa(goenv.Port), cert, nil); err != nil {
+					log_err.Fatal(err)
+				}
+			}
+		} else {
+			if err := http.ListenAndServeTLS(goenv.Bind+":"+strconv.Itoa(goenv.Port), goenv.Server_crt, goenv.Server_key, nil); err != nil {
+				log_err.Fatal(err)
+			}
 		}
 	}
 }

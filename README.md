@@ -24,9 +24,10 @@ It receives webhook and call specified command.
    * Command workdir
 * WEBHOOK_TLS (default:false)
    * Enable TLS
-* WEBHOOK_SERVER_CRT (default:server.crt)
+   * Certificate is generated automatically if WEBHOOK_SERVER_CRT or WEBHOOK_SERVER_KEY are not specified
+* WEBHOOK_SERVER_CRT (default:null)
    * TLS server crt file PATH
-* WEBHOOK_SERVER_KEY (default:server.key)
+* WEBHOOK_SERVER_KEY (default:null)
    * TLS server key file PATH
 
 ## Usage
