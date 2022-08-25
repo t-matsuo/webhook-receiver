@@ -25,18 +25,20 @@ import (
 )
 
 var goenv struct {
-	Cmd        string `required:"true"`
-	Port       int    `default:"22999"`
-	Bind       string `default:"0.0.0.0"`
-	Path       string `default:"/"`
-	Debug      bool   `default:"false"`
-	Log_prefix string `default:"[webhook]"`
-	No_alog    bool   `default:"false"`
-	Timeout    int    `default:"300"`
-	Workdir    string `default:"/tmp"`
-	Tls        bool   `default:"false"`
-	Server_crt string `default:""`
-	Server_key string `default:""`
+	Cmd           string `required:"true"`
+	Output_stdout bool   `default:"false"`
+	Output_stderr bool   `default:"false"`
+	Port          int    `default:"22999"`
+	Bind          string `default:"0.0.0.0"`
+	Path          string `default:"/"`
+	Debug         bool   `default:"false"`
+	Log_prefix    string `default:"[webhook]"`
+	No_alog       bool   `default:"false"`
+	Timeout       int    `default:"300"`
+	Workdir       string `default:"/tmp"`
+	Tls           bool   `default:"false"`
+	Server_crt    string `default:""`
+	Server_key    string `default:""`
 }
 
 var log_info *log.Logger
@@ -101,6 +103,8 @@ func handleEnv() {
 	}
 
 	log_info.Printf("Command is %s\n", goenv.Cmd)
+	log_info.Printf("Output stdout is %t\n", goenv.Output_stdout)
+	log_info.Printf("Output stderr is %t\n", goenv.Output_stderr)
 	log_info.Printf("Workdir is %s\n", goenv.Workdir)
 	if goenv.Tls == false {
 		log_info.Printf("Listening on http://%s:%d%s\n", goenv.Bind, goenv.Port, goenv.Path)
@@ -154,15 +158,30 @@ func handleReq(w http.ResponseWriter, r *http.Request) {
 			"WEBHOOK_PATH="+path,
 		)
 		cmd.Dir = goenv.Workdir
+
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 		err := cmd.Run()
 
 		if err != nil {
 			log_err.Printf("Internal Server Error. %s\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "Internal Server Error\n")
+			if goenv.Output_stderr {
+				fmt.Fprintf(w, "\n############### stderr ###############\n%s\n", stderr.String())
+			}
+			if goenv.Output_stdout {
+				fmt.Fprintf(w, "\n############### stdout ###############\n%s\n", stdout.String())
+			}
 		} else {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintf(w, "OK\n")
+			if goenv.Output_stdout {
+				fmt.Fprintf(w, "%s", stdout.String())
+			} else {
+				fmt.Fprintf(w, "OK\n")
+			}
 		}
 	default:
 		log_access.Printf("%s %s Method Not Allowed\n", alog_format, r.Method)

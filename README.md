@@ -6,6 +6,10 @@ It receives webhook and call specified command.
 
 * WEBHOOK_CMD (required)
    * command
+* WEBHOOK_OUTPUT_STDOUT (default:false)
+   * Output stdout of command to client
+* WEBHOOK_OUTPUT_STDERR (default:false)
+   * Output stderr of command to client if command does not exit with 0
 * WEBHOOK_PORT (default:22999)
    * Listen Port
 * WEBHOOK_BIND (default:0.0.0.0)
